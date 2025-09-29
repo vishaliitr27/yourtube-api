@@ -1,16 +1,14 @@
-// src/app.module.ts
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { QuizModule } from './quiz/quiz.module';
-import { ConfigModule } from '@nestjs/config'; // <-- Import this
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }), // <-- Add this line
-    QuizModule
+    // Make .env variables available globally throughout the app
+    ConfigModule.forRoot({ isGlobal: true }),
+    QuizModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}

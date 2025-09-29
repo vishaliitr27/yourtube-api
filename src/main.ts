@@ -5,10 +5,11 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // --- ADD THIS LINE ---
-  // This enables automatic validation for all incoming requests that use DTOs.
+  // Enable CORS so your extension can communicate with the backend
+  app.enableCors();
+
+  // Enable global validation pipe to automatically validate incoming data
   app.useGlobalPipes(new ValidationPipe());
-  // --------------------
 
   await app.listen(3000);
 }
