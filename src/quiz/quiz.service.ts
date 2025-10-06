@@ -1,16 +1,27 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
+import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class QuizService {
   private openai: OpenAI;
+  private supabase;
 
   // Inject ConfigService to securely access API keys from .env file
-  constructor(private configService: ConfigService) {
+  // constructor(private configService: ConfigService) {
+  //   this.openai = new OpenAI({
+  //     apiKey: this.configService.get<string>('OPENAI_API_KEY'),
+  //   });
+  // }
+   constructor(
+    private configService: ConfigService,
+    private supabaseService: SupabaseService, // Inject Supabase
+  )  {
     this.openai = new OpenAI({
       apiKey: this.configService.get<string>('OPENAI_API_KEY'),
     });
+    this.supabase = this.supabaseService.getClient(); // Get the client
   }
 
   async generateQuizFromTranscript(userId: string, transcript: string) {
@@ -49,9 +60,29 @@ export class QuizService {
       if (!jsonContent) {
         throw new InternalServerErrorException('AI returned empty or invalid content.');
       }
+       const quizData = JSON.parse(jsonContent);
+        // --- SAVE TO DATABASE ---
+      const { error } = await this.supabase.from('generations').insert({
+        user_id: userId, // Will be real user ID later
+        video_id: videoId,
+        video_title: videoTitle,
+        generation_type: 'quiz',
+        transcript_input: transcript,
+        openai_output: quizData, // Supabase handles JSON automatically
+      });
+
+      if (error) {
+        console.error('Supabase error saving quiz:', error);
+        // We don't throw an error here, as the user should still get the quiz
+        // even if saving fails. This is a background task.
+      } else {
+        console.log('Quiz generation successfully saved to DB.');
+      }
+      // ----------------------
+
+      return quizData;
+
       
-      console.log('Quiz generated successfully.');
-      return JSON.parse(jsonContent);
 
     } catch (aiError) {
       console.error('Error generating quiz from OpenAI:', aiError);
