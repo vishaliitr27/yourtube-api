@@ -21,10 +21,11 @@ export class QuizService {
     this.openai = new OpenAI({
       apiKey: this.configService.get<string>('OPENAI_API_KEY'),
     });
-    this.supabase = this.supabaseService.getClient(); // Get the client
+    this.supabase = this.supabaseService.getClient();
   }
 
-  async generateQuizFromTranscript(userId: string,
+  async generateQuizFromTranscript(
+    userId: string,
     videoId: string,
     videoTitle: string,
     transcript: string,) {
@@ -64,22 +65,48 @@ export class QuizService {
         throw new InternalServerErrorException('AI returned empty or invalid content.');
       }
        const quizData = JSON.parse(jsonContent);
+       
         // --- SAVE TO DATABASE ---
-      const { error } = await this.supabase.from('generations').insert({
-        user_id: userId, // Will be real user ID later
+      // const { error } = await this.supabase.from('generations').insert({
+      //   user_id: userId, // Will be real user ID later
+      //   video_id: videoId,
+      //   video_title: videoTitle,
+      //   generation_type: 'quiz',
+      //   transcript_input: transcript,
+      //   openai_output: quizData, // Supabase handles JSON automatically
+      // });
+      //  const generationRecord = {
+      //   video_id: videoId,
+      //   video_title: videoTitle,
+      //   generation_type: 'quiz',
+      //   transcript_input: transcript,
+      //   openai_output: quizData,
+      // };
+       const generationRecord: {
+        video_id: string;
+        video_title: string;
+        generation_type: string;
+        transcript_input: string;
+        openai_output: any;
+        user_id?: string; // Define user_id as an optional property
+      } = {
         video_id: videoId,
         video_title: videoTitle,
         generation_type: 'quiz',
         transcript_input: transcript,
-        openai_output: quizData, // Supabase handles JSON automatically
-      });
+        openai_output: quizData,
+      };
+      if (userId && userId !== 'placeholder-user-id') {
+        generationRecord.user_id = userId;
+      }
+
+      const { error } = await this.supabase.from('generations').insert(generationRecord);
+      // -------------------------------------------
 
       if (error) {
         console.error('Supabase error saving quiz:', error);
-        // We don't throw an error here, as the user should still get the quiz
-        // even if saving fails. This is a background task.
       } else {
-        console.log('Quiz generation successfully saved to DB.');
+        console.log(`Quiz for video ${videoId} saved to DB.`);
       }
       // ----------------------
 

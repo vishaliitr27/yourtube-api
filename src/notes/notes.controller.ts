@@ -8,9 +8,9 @@ export class NotesController {
 
   @Post('generate')
   generateNotes(@Body(new ValidationPipe()) generateNotesDto: GenerateNotesDto) {
-    const { transcript } = generateNotesDto;
+    const { videoId, videoTitle, transcript } = generateNotesDto;
     // In the future, you will get the userId from your authentication guard
     const userId = 'placeholder-user-id';
-    return this.notesService.generateNotesFromTranscript(userId, transcript);
+    return this.notesService.generateNotesFromTranscript(userId,videoId,videoTitle , transcript);
   }
 }

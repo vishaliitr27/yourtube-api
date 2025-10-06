@@ -1,18 +1,33 @@
 import { Injectable, InternalServerErrorException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
+import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class NotesService {
   private openai: OpenAI;
+  private supabase;
 
-  constructor(private configService: ConfigService) {
+  // constructor(private configService: ConfigService) {
+  //   this.openai = new OpenAI({
+  //     apiKey: this.configService.get<string>('OPENAI_API_KEY'),
+  //   });
+  // }
+  constructor(
+    private configService: ConfigService,
+    private supabaseService: SupabaseService,
+  ) {
     this.openai = new OpenAI({
       apiKey: this.configService.get<string>('OPENAI_API_KEY'),
     });
+    this.supabase = this.supabaseService.getClient();
   }
 
-  async generateNotesFromTranscript(userId: string, transcript: string) {
+  async generateNotesFromTranscript(
+    userId: string,
+    videoId: string,
+    videoTitle: string,
+    transcript: string,) {
     console.log(`Received transcript, generating NOTES for user: ${userId}`);
 
     if (!transcript || transcript.trim().length < 100) {
@@ -67,6 +82,31 @@ export class NotesService {
 
       if (!notesData.notes || typeof notesData.notes !== 'string') {
         throw new InternalServerErrorException('AI returned an invalid notes format.');
+      }
+      const generationRecord: {
+        video_id: string;
+        video_title: string;
+        generation_type: string;
+        transcript_input: string;
+        openai_output: any;
+        user_id?: string; // Define user_id as an optional property
+      } = {
+        video_id: videoId,
+        video_title: videoTitle,
+        generation_type: 'quiz',
+        transcript_input: transcript,
+        openai_output: notesData,
+      };
+       if (userId && userId !== 'placeholder-user-id') {
+        generationRecord.user_id = userId;
+      }
+
+      const { error } = await this.supabase.from('generations').insert(generationRecord);
+      // -------------------------------------------
+      if (error) {
+        console.error('Supabase error saving notes:', error);
+      } else {
+        console.log(`Notes for video ${videoId} saved to DB.`);
       }
 
       return notesData;
