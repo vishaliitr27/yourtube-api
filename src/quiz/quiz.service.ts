@@ -24,7 +24,10 @@ export class QuizService {
     this.supabase = this.supabaseService.getClient(); // Get the client
   }
 
-  async generateQuizFromTranscript(userId: string, transcript: string) {
+  async generateQuizFromTranscript(userId: string,
+    videoId: string,
+    videoTitle: string,
+    transcript: string,) {
     console.log(`Received transcript for user: ${userId}, generating quiz...`);
     
     try {
